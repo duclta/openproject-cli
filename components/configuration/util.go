@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,39 +19,69 @@ const (
 )
 
 func WriteConfigFile(host, token string) error {
+	return WriteAuthConfig(AuthConfig{Host: host, AuthType: AuthTypeAPIToken, Token: token})
+}
+
+func WriteAuthConfig(config AuthConfig) error {
 	err := ensureConfigDir()
 	if err != nil {
 		return err
 	}
 
-	bytes := []byte(fmt.Sprintf("%s %s", host, token))
-	return os.WriteFile(configFile(), bytes, 0644)
+	bytes, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(configFile(), bytes, 0600)
 }
 
 func ReadConfig() (host, token string, err error) {
-	err = ensureConfigDir()
+	config, err := ReadAuthConfig()
 	if err != nil {
 		return "", "", err
 	}
 
+	return config.Host, config.Token, nil
+}
+
+func ReadAuthConfig() (AuthConfig, error) {
+	err := ensureConfigDir()
+	if err != nil {
+		return AuthConfig{}, err
+	}
+
 	ok, h, t := readEnvironment()
 	if ok {
-		return h, t, nil
+		return AuthConfig{Host: h, AuthType: AuthTypeAPIToken, Token: t}, nil
 	}
 
 	file, err := os.ReadFile(configFile())
 	if os.IsNotExist(err) {
 		// Empty config file is no error,
 		// user just has to run login command first
-		return "", "", nil
+		return AuthConfig{}, nil
+	}
+	if err != nil {
+		return AuthConfig{}, err
 	}
 
-	parts := strings.Split(common.SanitizeLineBreaks(string(file)), " ")
+	content := common.SanitizeLineBreaks(string(file))
+	if len(strings.TrimSpace(content)) == 0 {
+		return AuthConfig{}, nil
+	}
+
+	var config AuthConfig
+	if err := json.Unmarshal(file, &config); err == nil && config.HasHost() {
+		return config, nil
+	}
+
+	parts := strings.Fields(content)
 	if len(parts) != 2 {
-		return "", "", errors.Custom(fmt.Sprintf("Invalid config file at %s. Please remove the file and run `op login` again.", configFile()))
+		return AuthConfig{}, errors.Custom(fmt.Sprintf("Invalid config file at %s. Please remove the file and run `op login` again.", configFile()))
 	}
 
-	return parts[0], parts[1], nil
+	return AuthConfig{Host: parts[0], AuthType: AuthTypeAPIToken, Token: parts[1]}, nil
 }
 
 func readEnvironment() (ok bool, host, token string) {

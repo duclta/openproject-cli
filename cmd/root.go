@@ -60,18 +60,18 @@ func init() {
 	activePrinter := &printer.ConsolePrinter{}
 	printer.Init(activePrinter)
 
-	host, token, err := configuration.ReadConfig()
+	authConfig, err := configuration.ReadAuthConfig()
 	if err != nil {
 		printer.Error(err)
 		return
 	}
 
-	parse, err := url.Parse(host)
+	parse, err := url.Parse(authConfig.Host)
 	if err != nil {
 		printer.Error(err)
 	}
 
-	requests.Init(parse, token, Verbose)
+	requests.Init(parse, authConfig, Verbose)
 	routes.Init(parse)
 
 	rootCmd.Flags().BoolVarP(
