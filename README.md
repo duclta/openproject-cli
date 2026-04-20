@@ -184,6 +184,19 @@ op update workpackage 42 --attach ./Downloads/Report.pdf
 op inspect workpackage 42
 ```
 
+## Creating a release
+
+Releases are triggered by pushing a git tag. The tag name becomes the version string embedded in the binaries.
+
+```shell
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+This triggers the [Release workflow](https://github.com/opf/openproject-cli/actions/workflows/release.yml), which builds binaries for all platforms and publishes a GitHub release with zip archives attached.
+
+Once the workflow completes, go to the [GitHub releases page](https://github.com/opf/openproject-cli/releases) and manually edit the release to add the release notes.
+
 ## Used open source tools and libraries
 
 - [Go](https://github.com/golang/go) programming language and tools
