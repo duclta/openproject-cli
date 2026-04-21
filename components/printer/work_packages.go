@@ -26,6 +26,16 @@ func WorkPackages(workPackages []*models.WorkPackage) {
 	}
 }
 
+func WorkPackageCollection(collection *models.WorkPackageCollection) {
+	activePrinter.Printf(
+		"Page: %s | Total: %s\n\n",
+		Cyan(strconv.FormatInt(currentPage(collection), 10)),
+		Cyan(strconv.FormatInt(collection.Total, 10)),
+	)
+
+	WorkPackages(collection.Items)
+}
+
 func WorkPackage(workPackage *models.WorkPackage) {
 	printHeadline(workPackage, idLength(workPackage.Id), 0, utf8.RuneCountInString(workPackage.Type))
 	printAttributes(workPackage)
@@ -37,6 +47,14 @@ func WorkPackage(workPackage *models.WorkPackage) {
 
 func idLength(id uint64) int {
 	return len(strconv.FormatUint(id, 10)) + 1
+}
+
+func currentPage(collection *models.WorkPackageCollection) int64 {
+	if collection == nil || collection.Offset <= 0 {
+		return 1
+	}
+
+	return collection.Offset
 }
 
 func printHeadline(workPackage *models.WorkPackage, maxIdLength, maxStatusLength, maxTypeLength int) {

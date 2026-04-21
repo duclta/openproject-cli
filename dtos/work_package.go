@@ -11,6 +11,9 @@ type WorkPackageLinksDto struct {
 	Project           *LinkDto   `json:"project,omitempty"`
 	Assignee          *LinkDto   `json:"assignee,omitempty"`
 	Type              *LinkDto   `json:"type,omitempty"`
+	Priority          *LinkDto   `json:"priority,omitempty"`
+	Parent            *LinkDto   `json:"parent,omitempty"`
+	Version           *LinkDto   `json:"version,omitempty"`
 	CustomActions     []*LinkDto `json:"customActions,omitempty"`
 	PrepareAttachment *LinkDto   `json:"prepareAttachment,omitempty"`
 }
@@ -20,8 +23,10 @@ type WorkPackageDto struct {
 	Subject     string               `json:"subject,omitempty"`
 	Links       *WorkPackageLinksDto `json:"_links,omitempty"`
 	Description *LongTextDto         `json:"description,omitempty"`
+	StartDate   *string              `json:"startDate"`
+	DueDate     *string              `json:"dueDate"`
 	Embedded    *embeddedDto         `json:"_embedded,omitempty"`
-	LockVersion int                  `json:"lockVersion,omitempty"`
+	LockVersion int                  `json:"lockVersion"`
 }
 
 type embeddedDto struct {
@@ -48,15 +53,42 @@ type CreateWorkPackageDto struct {
 /////////////// MODEL CONVERSION ///////////////
 
 func (dto *WorkPackageDto) Convert() *models.WorkPackage {
-	return &models.WorkPackage{
+	wp := &models.WorkPackage{
 		Id:          uint64(dto.Id),
 		Subject:     dto.Subject,
-		Type:        dto.Links.Type.Title,
-		Assignee:    dto.Links.Assignee.Title,
-		Status:      dto.Links.Status.Title,
 		Description: dto.Description.Raw,
 		LockVersion: dto.LockVersion,
 	}
+
+	if dto.StartDate != nil {
+		wp.StartDate = *dto.StartDate
+	}
+	if dto.DueDate != nil {
+		wp.DueDate = *dto.DueDate
+	}
+
+	if dto.Links != nil {
+		if dto.Links.Type != nil {
+			wp.Type = dto.Links.Type.Title
+		}
+		if dto.Links.Assignee != nil {
+			wp.Assignee = dto.Links.Assignee.Title
+		}
+		if dto.Links.Status != nil {
+			wp.Status = dto.Links.Status.Title
+		}
+		if dto.Links.Priority != nil {
+			wp.Priority = dto.Links.Priority.Title
+		}
+		if dto.Links.Parent != nil {
+			wp.Parent = dto.Links.Parent.Title
+		}
+		if dto.Links.Version != nil {
+			wp.Version = dto.Links.Version.Title
+		}
+	}
+
+	return wp
 }
 
 func (dto *WorkPackageCollectionDto) Convert() *models.WorkPackageCollection {

@@ -16,6 +16,27 @@ func initWorkPackagesFlags() {
 		0,
 		"Show only work packages within the specified projectId")
 
+	workPackagesCmd.Flags().IntVarP(
+		&limit,
+		"limit",
+		"l",
+		defaultWorkPackageLimit,
+		"Maximum number of work packages to return. Use -1 to fetch all matching work packages.")
+
+	workPackagesCmd.Flags().IntVarP(
+		&page,
+		"page",
+		"",
+		defaultWorkPackagePage,
+		"Page number to return. Works together with --limit.")
+
+	workPackagesCmd.Flags().StringVarP(
+		&sortBy,
+		"sort",
+		"",
+		defaultWorkPackageSort,
+		"Sort work packages as FIELD:ORDER, for example 'id:desc' or 'status:asc'.")
+
 	workPackagesCmd.Flags().StringVarP(
 		&statusFilter,
 		"status",

@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/opf/openproject-cli/cmd/comment"
 	"github.com/opf/openproject-cli/cmd/create"
 	"github.com/opf/openproject-cli/cmd/git"
 	"github.com/opf/openproject-cli/cmd/inspect"
@@ -96,6 +97,7 @@ func init() {
 		update.RootCmd,
 		inspect.RootCmd,
 		create.RootCmd,
+		comment.RootCmd,
 		search.RootCmd,
 		git.RootCmd,
 	)

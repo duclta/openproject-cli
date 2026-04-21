@@ -2,7 +2,7 @@ package dtos
 
 import "github.com/opf/openproject-cli/models"
 
-type statusDto struct {
+type StatusDto struct {
 	Id         uint64 `json:"id"`
 	Name       string `json:"name"`
 	Color      string `json:"color"`
@@ -13,7 +13,7 @@ type statusDto struct {
 }
 
 type statusElements struct {
-	Elements []*statusDto `json:"elements"`
+	Elements []*StatusDto `json:"elements"`
 }
 
 type StatusCollectionDto struct {
@@ -33,7 +33,7 @@ func (dto *StatusCollectionDto) Convert() []*models.Status {
 	return projects
 }
 
-func (dto *statusDto) Convert() *models.Status {
+func (dto *StatusDto) Convert() *models.Status {
 	return &models.Status{
 		Id:         dto.Id,
 		Name:       dto.Name,

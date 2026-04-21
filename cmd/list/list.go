@@ -12,6 +12,7 @@ The list can get filtered further.`,
 func init() {
 	initWorkPackagesFlags()
 	initTimeEntriesFlags()
+	initVersionsFlags()
 
 	notificationsCmd.Flags().StringVarP(
 		&notificationReason,
@@ -29,5 +30,6 @@ func init() {
 		statusCmd,
 		timeEntriesCmd,
 		typesCmd,
+		versionsCmd,
 	)
 }

@@ -34,5 +34,40 @@ func init() {
 		"Change the work package type",
 	)
 
+	createWorkPackageCmd.Flags().StringVar(
+		&descriptionFlag,
+		"description",
+		"",
+		"Work package description (markdown supported)",
+	)
+
+	createWorkPackageCmd.Flags().StringVar(
+		&parentFlag,
+		"parent",
+		"",
+		"Parent work package ID",
+	)
+
+	createWorkPackageCmd.Flags().StringVar(
+		&versionFlag,
+		"version",
+		"",
+		"Version name or ID",
+	)
+
+	createWorkPackageCmd.Flags().StringVar(
+		&startDateFlag,
+		"start-date",
+		"",
+		"Start date (YYYY-MM-DD)",
+	)
+
+	createWorkPackageCmd.Flags().StringVar(
+		&dueDateFlag,
+		"due-date",
+		"",
+		"Due date (YYYY-MM-DD)",
+	)
+
 	RootCmd.AddCommand(createWorkPackageCmd)
 }

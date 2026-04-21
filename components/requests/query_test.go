@@ -100,6 +100,26 @@ func TestQuery_String(t *testing.T) {
 	}
 }
 
+func TestQuery_String_WithSortByAttribute(t *testing.T) {
+	queryString := requests.NewQuery(
+		map[string]string{
+			"pageSize": "20",
+			"sortBy":   `[["id","desc"]]`,
+		},
+		nil,
+	).String()
+
+	expected := "pageSize=20"
+	if !strings.Contains(queryString, expected) {
+		t.Errorf("Expected %s to contain %s", queryString, expected)
+	}
+
+	expected = "sortBy=%5B%5B%22id%22%2C%22desc%22%5D%5D"
+	if !strings.Contains(queryString, expected) {
+		t.Errorf("Expected %s to contain %s", queryString, expected)
+	}
+}
+
 func TestFilter_Equals(t *testing.T) {
 	filter1 := work_packages.StatusFilter("1,3")
 	filter2 := work_packages.StatusFilter("3,1")

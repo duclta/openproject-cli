@@ -168,3 +168,38 @@ func TestWorkPackages(t *testing.T) {
 		t.Errorf("\nExpected:\n%sbut got:\n%s", expected, testingPrinter.Result)
 	}
 }
+
+func TestWorkPackageCollection(t *testing.T) {
+	testingPrinter.Reset()
+
+	collection := &models.WorkPackageCollection{
+		Total:    10922,
+		PageSize: 2,
+		Offset:   3,
+		Items: []*models.WorkPackage{
+			{
+				Id:      42,
+				Subject: "Test 1",
+				Type:    "PHASE",
+				Status:  "In progress",
+			},
+			{
+				Id:      43,
+				Subject: "Test 2",
+				Type:    "TASK",
+				Status:  "New",
+			},
+		},
+	}
+
+	var expected string
+	expected += fmt.Sprintf("Page: %s | Total: %s\n\n", printer.Cyan("3"), printer.Cyan("10922"))
+	expected += fmt.Sprintf("%s %s [%s] %s\n", printer.Red("#42"), printer.Green("PHASE"), printer.Yellow("In progress"), printer.Cyan("Test 1"))
+	expected += fmt.Sprintf("%s %s [%s]         %s\n", printer.Red("#43"), printer.Green("TASK "), printer.Yellow("New"), printer.Cyan("Test 2"))
+
+	printer.WorkPackageCollection(collection)
+
+	if testingPrinter.Result != expected {
+		t.Errorf("\nExpected:\n%sbut got:\n%s", expected, testingPrinter.Result)
+	}
+}

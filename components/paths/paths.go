@@ -22,6 +22,10 @@ func ProjectVersions(projectId uint64) string {
 	return Project(projectId) + "/versions"
 }
 
+func Version(id uint64) string {
+	return Root() + "/versions" + fmt.Sprintf("/%d", id)
+}
+
 func ProjectWorkPackages(projectId uint64) string {
 	return Project(projectId) + "/work_packages"
 }
@@ -34,12 +38,20 @@ func Status() string {
 	return Root() + "/statuses"
 }
 
+func StatusById(id uint64) string {
+	return Status() + fmt.Sprintf("/%d", id)
+}
+
 func TimeEntries() string {
 	return Root() + "/time_entries"
 }
 
 func Types() string {
 	return Root() + "/types"
+}
+
+func Priorities() string {
+	return Root() + "/priorities"
 }
 
 func User(id uint64) string {

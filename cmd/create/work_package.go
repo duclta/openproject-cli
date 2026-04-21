@@ -14,6 +14,11 @@ import (
 var projectId uint64
 var shouldOpenWorkPackageInBrowser bool
 var typeFlag string
+var descriptionFlag string
+var parentFlag string
+var versionFlag string
+var startDateFlag string
+var dueDateFlag string
 
 var createWorkPackageCmd = &cobra.Command{
 	Use:   "workpackage [subject]",
@@ -52,6 +57,21 @@ func createOptions(subject string) map[work_packages.CreateOption]string {
 
 	if len(typeFlag) > 0 {
 		options[work_packages.CreateType] = typeFlag
+	}
+	if len(descriptionFlag) > 0 {
+		options[work_packages.CreateDescription] = descriptionFlag
+	}
+	if len(parentFlag) > 0 {
+		options[work_packages.CreateParent] = parentFlag
+	}
+	if len(versionFlag) > 0 {
+		options[work_packages.CreateVersion] = versionFlag
+	}
+	if len(startDateFlag) > 0 {
+		options[work_packages.CreateStartDate] = startDateFlag
+	}
+	if len(dueDateFlag) > 0 {
+		options[work_packages.CreateDueDate] = dueDateFlag
 	}
 
 	return options

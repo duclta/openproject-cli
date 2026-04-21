@@ -50,4 +50,46 @@ func addWorkPackageFlags() {
 		"",
 		"Change the work package type",
 	)
+	workPackageCmd.Flags().StringVar(
+		&descriptionFlag,
+		"description",
+		"",
+		"Change the description of the work package (markdown supported)",
+	)
+	workPackageCmd.Flags().StringVar(
+		&statusFlag,
+		"status",
+		"",
+		"Change the status of the work package",
+	)
+	workPackageCmd.Flags().StringVar(
+		&priorityFlag,
+		"priority",
+		"",
+		"Change the priority of the work package",
+	)
+	workPackageCmd.Flags().StringVar(
+		&parentFlag,
+		"parent",
+		"",
+		"Change the parent work package",
+	)
+	workPackageCmd.Flags().StringVar(
+		&versionFlag,
+		"version",
+		"",
+		"Change the version of the work package",
+	)
+	workPackageCmd.Flags().StringVar(
+		&startDateFlag,
+		"start-date",
+		"",
+		"Change the start date (YYYY-MM-DD). Use 'none' to clear.",
+	)
+	workPackageCmd.Flags().StringVar(
+		&dueDateFlag,
+		"due-date",
+		"",
+		"Change the due date (YYYY-MM-DD). Use 'none' to clear.",
+	)
 }

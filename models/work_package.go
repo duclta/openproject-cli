@@ -6,7 +6,12 @@ type WorkPackage struct {
 	Type        string
 	Assignee    string
 	Status      string
+	Priority    string
+	Parent      string
+	Version     string
 	Description string
+	StartDate   string
+	DueDate     string
 	LockVersion int
 }
 

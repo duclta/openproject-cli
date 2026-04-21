@@ -11,11 +11,18 @@ import (
 )
 
 var (
-	actionFlag   string
-	assigneeFlag uint64
-	attachFlag   string
-	subjectFlag  string
-	typeFlag     string
+	actionFlag      string
+	assigneeFlag    uint64
+	attachFlag      string
+	subjectFlag     string
+	typeFlag        string
+	descriptionFlag string
+	statusFlag      string
+	priorityFlag    string
+	parentFlag      string
+	versionFlag     string
+	startDateFlag   string
+	dueDateFlag     string
 )
 
 var workPackageCmd = &cobra.Command{
@@ -62,6 +69,27 @@ func updateOptions() map[work_packages.UpdateOption]string {
 	}
 	if len(typeFlag) > 0 {
 		options[work_packages.UpdateType] = typeFlag
+	}
+	if len(descriptionFlag) > 0 {
+		options[work_packages.UpdateDescription] = descriptionFlag
+	}
+	if len(statusFlag) > 0 {
+		options[work_packages.UpdateStatus] = statusFlag
+	}
+	if len(priorityFlag) > 0 {
+		options[work_packages.UpdatePriority] = priorityFlag
+	}
+	if len(parentFlag) > 0 {
+		options[work_packages.UpdateParent] = parentFlag
+	}
+	if len(versionFlag) > 0 {
+		options[work_packages.UpdateVersion] = versionFlag
+	}
+	if len(startDateFlag) > 0 {
+		options[work_packages.UpdateStartDate] = startDateFlag
+	}
+	if len(dueDateFlag) > 0 {
+		options[work_packages.UpdateDueDate] = dueDateFlag
 	}
 
 	return options

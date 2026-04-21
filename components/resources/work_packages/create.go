@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/opf/openproject-cli/components/common"
 	"github.com/opf/openproject-cli/components/parser"
 	"github.com/opf/openproject-cli/components/paths"
 	"github.com/opf/openproject-cli/components/printer"
@@ -18,11 +19,21 @@ type CreateOption int
 const (
 	CreateSubject CreateOption = iota
 	CreateType
+	CreateDescription
+	CreateParent
+	CreateVersion
+	CreateStartDate
+	CreateDueDate
 )
 
 var createMap = map[CreateOption]func(projectId uint64, workPackage *dtos.WorkPackageDto, input string) error{
-	CreateSubject: subjectCreate,
-	CreateType:    typeCreate,
+	CreateSubject:     subjectCreate,
+	CreateType:        typeCreate,
+	CreateDescription: descriptionCreate,
+	CreateParent:      parentCreate,
+	CreateVersion:     versionCreate,
+	CreateStartDate:   startDateCreate,
+	CreateDueDate:     dueDateCreate,
 }
 
 func subjectCreate(_ uint64, workPackage *dtos.WorkPackageDto, input string) error {
@@ -57,6 +68,67 @@ func typeCreate(projectId uint64, workPackage *dtos.WorkPackageDto, input string
 
 	workPackage.Links.Type = foundType.Links.Self
 
+	return nil
+}
+
+func descriptionCreate(_ uint64, workPackage *dtos.WorkPackageDto, input string) error {
+	workPackage.Description = &dtos.LongTextDto{
+		Format: "markdown",
+		Raw:    input,
+	}
+	return nil
+}
+
+func parentCreate(_ uint64, workPackage *dtos.WorkPackageDto, input string) error {
+	_, parentId := common.ParseId(input)
+	if parentId == 0 {
+		return fmt.Errorf("invalid parent work package id: %s", input)
+	}
+
+	parentLink, err := parentWorkPackage(parentId)
+	if err != nil {
+		return err
+	}
+
+	if workPackage.Links == nil {
+		workPackage.Links = &dtos.WorkPackageLinksDto{}
+	}
+	workPackage.Links.Parent = parentLink
+	return nil
+}
+
+func versionCreate(projectId uint64, workPackage *dtos.WorkPackageDto, input string) error {
+	versions, err := availableVersions(projectId)
+	if err != nil {
+		return err
+	}
+
+	foundVersion := findVersion(input, versions)
+	if foundVersion == nil {
+		printer.ErrorText("Failed to create work package version.")
+		printer.Info(fmt.Sprintf(
+			"No unique available version from input %s found for project %s. Please use one of the versions listed below.",
+			printer.Cyan(input),
+			printer.Red(fmt.Sprintf("#%d", projectId)),
+		))
+		printer.Versions(versions.Convert())
+		return nil
+	}
+
+	if workPackage.Links == nil {
+		workPackage.Links = &dtos.WorkPackageLinksDto{}
+	}
+	workPackage.Links.Version = &dtos.LinkDto{Href: paths.Version(uint64(foundVersion.Id))}
+	return nil
+}
+
+func startDateCreate(_ uint64, workPackage *dtos.WorkPackageDto, input string) error {
+	workPackage.StartDate = &input
+	return nil
+}
+
+func dueDateCreate(_ uint64, workPackage *dtos.WorkPackageDto, input string) error {
+	workPackage.DueDate = &input
 	return nil
 }
 

@@ -7,6 +7,12 @@ import (
 	"github.com/opf/openproject-cli/models"
 )
 
+func Activity(activity *models.Activity) {
+	user := &models.User{Id: activity.UserId}
+	printActivityHeadline(activity, user)
+	printActivityBody(activity)
+}
+
 func Activities(activities []*models.Activity, users []*models.User) {
 	for _, activity := range activities {
 		user := &models.User{
