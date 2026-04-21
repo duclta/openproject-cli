@@ -64,7 +64,35 @@ func AuthenticateSession(hostURL *url.URL, username, password string, verboseFla
 		Host:      hostURL.String(),
 		AuthType:  configuration.AuthTypeSession,
 		Username:  username,
-		Password:  password,
+		CSRFToken: csrfToken,
+		Cookies:   cookiesForHost(httpClient, hostURL),
+	}, nil
+}
+
+func RefreshSession(hostURL *url.URL, authConfig configuration.AuthConfig, verboseFlag bool) (configuration.AuthConfig, error) {
+	printer.Debug(verboseFlag, "Refreshing web session from stored cookies ...")
+
+	httpClient, err := newSessionClient()
+	if err != nil {
+		return configuration.AuthConfig{}, err
+	}
+
+	setSessionCookies(httpClient.Jar, hostURL, authConfig.Cookies)
+
+	csrfToken, err := fetchCSRFToken(httpClient, hostURL)
+	if err != nil {
+		return configuration.AuthConfig{}, err
+	}
+
+	err = verifyAuthenticatedSession(httpClient, hostURL)
+	if err != nil {
+		return configuration.AuthConfig{}, err
+	}
+
+	return configuration.AuthConfig{
+		Host:      hostURL.String(),
+		AuthType:  configuration.AuthTypeSession,
+		Username:  authConfig.Username,
 		CSRFToken: csrfToken,
 		Cookies:   cookiesForHost(httpClient, hostURL),
 	}, nil

@@ -28,7 +28,19 @@ func WriteAuthConfig(config AuthConfig) error {
 		return err
 	}
 
-	bytes, err := json.MarshalIndent(config, "", "  ")
+	storedConfig := config
+	if config.UsesSessionAuth() {
+		err = storeSessionSecret(config)
+		if err != nil {
+			return err
+		}
+
+		storedConfig.Password = ""
+		storedConfig.CSRFToken = ""
+		storedConfig.Cookies = nil
+	}
+
+	bytes, err := json.MarshalIndent(storedConfig, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -73,6 +85,20 @@ func ReadAuthConfig() (AuthConfig, error) {
 
 	var config AuthConfig
 	if err := json.Unmarshal(file, &config); err == nil && config.HasHost() {
+		if config.UsesSessionAuth() {
+			config, err = migrateSessionAuthConfig(config)
+			if err != nil {
+				return AuthConfig{}, err
+			}
+
+			config.CSRFToken = ""
+			config.Password = ""
+			config.Cookies, err = loadSessionSecret(config)
+			if err != nil {
+				return AuthConfig{}, err
+			}
+		}
+
 		return config, nil
 	}
 
@@ -82,6 +108,21 @@ func ReadAuthConfig() (AuthConfig, error) {
 	}
 
 	return AuthConfig{Host: parts[0], AuthType: AuthTypeAPIToken, Token: parts[1]}, nil
+}
+
+func migrateSessionAuthConfig(config AuthConfig) (AuthConfig, error) {
+	if !hasPlaintextSessionSecrets(config) {
+		return config, nil
+	}
+
+	if err := WriteAuthConfig(config); err != nil {
+		return AuthConfig{}, errors.Custom(fmt.Sprintf("Could not migrate stored session secrets to OS keychain: %v", err))
+	}
+
+	config.Password = ""
+	config.CSRFToken = ""
+	config.Cookies = nil
+	return config, nil
 }
 
 func readEnvironment() (ok bool, host, token string) {

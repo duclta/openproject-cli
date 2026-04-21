@@ -182,11 +182,15 @@ func execute(request *http.Request) (*http.Response, []byte, error) {
 		return nil, nil, err
 	}
 
+	if auth.UsesSessionAuth() {
+		auth.Cookies = cookiesForHost(client, host)
+	}
+
 	return resp, response, nil
 }
 
 func shouldReAuthenticate(method string, statusCode int, response []byte) bool {
-	if !auth.UsesSessionAuth() || len(auth.Username) == 0 || len(auth.Password) == 0 {
+	if !auth.UsesSessionAuth() {
 		return false
 	}
 
@@ -203,8 +207,30 @@ func shouldReAuthenticate(method string, statusCode int, response []byte) bool {
 }
 
 func reAuthenticate() error {
-	refreshedAuth, err := AuthenticateSession(host, auth.Username, auth.Password, verbose)
+	storedAuth, err := configuration.ReadAuthConfig()
 	if err != nil {
+		return err
+	}
+
+	if len(storedAuth.Cookies) == 0 {
+		storedAuth = auth
+	}
+
+	if len(storedAuth.Cookies) == 0 {
+		return errors.Custom("Stored session has expired or is unavailable. Run `op login` again.")
+	}
+
+	refreshedAuth, err := RefreshSession(host, storedAuth, verbose)
+	if err != nil {
+		if _, ok := err.(*errors.ResponseError); ok {
+			return errors.Custom("Stored session has expired or is unavailable. Run `op login` again.")
+		}
+
+		lowerMessage := strings.ToLower(err.Error())
+		if strings.Contains(lowerMessage, "invalid username or password") || strings.Contains(lowerMessage, "anonymous") {
+			return errors.Custom("Stored session has expired or is unavailable. Run `op login` again.")
+		}
+
 		return err
 	}
 

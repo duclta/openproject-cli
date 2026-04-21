@@ -12,10 +12,12 @@ import (
 
 	"github.com/opf/openproject-cli/components/configuration"
 	"github.com/opf/openproject-cli/components/printer"
+	keyring "github.com/zalando/go-keyring"
 )
 
 func TestDo_ReauthenticatesSessionOnUnauthorized(t *testing.T) {
 	printer.Init(&printer.TestingPrinter{})
+	keyring.MockInit()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
 	server, state := newSessionTestServer(t)
@@ -26,18 +28,32 @@ func TestDo_ReauthenticatesSessionOnUnauthorized(t *testing.T) {
 		t.Fatalf("parse server url: %v", err)
 	}
 
-	Init(hostURL, configuration.AuthConfig{
-		Host:      server.URL,
-		AuthType:  configuration.AuthTypeSession,
-		Username:  state.username,
-		Password:  state.password,
-		CSRFToken: "stale-csrf",
+	startingAuth := configuration.AuthConfig{
+		Host:     server.URL,
+		AuthType: configuration.AuthTypeSession,
+		Username: state.username,
 		Cookies: []configuration.Cookie{{
 			Name:  sessionCookieName,
 			Value: "stale-session",
 			Path:  "/",
+		}, {
+			Name:  autologinCookieName,
+			Value: freshAutologinValue,
+			Path:  "/",
 		}},
-	}, false)
+	}
+
+	err = configuration.WriteAuthConfig(startingAuth)
+	if err != nil {
+		t.Fatalf("write stored auth config: %v", err)
+	}
+
+	storedAuth, err := configuration.ReadAuthConfig()
+	if err != nil {
+		t.Fatalf("read stored auth config: %v", err)
+	}
+
+	Init(hostURL, storedAuth, false)
 
 	body, err := Do("GET", "/api/v3/projects", nil, nil)
 	if err != nil {
@@ -48,8 +64,8 @@ func TestDo_ReauthenticatesSessionOnUnauthorized(t *testing.T) {
 		t.Fatalf("unexpected response body: %s", body)
 	}
 
-	if state.loginCount != 1 {
-		t.Fatalf("expected exactly one re-login, got %d", state.loginCount)
+	if state.loginCount != 0 {
+		t.Fatalf("expected cookie-based refresh without password login, got %d logins", state.loginCount)
 	}
 
 	storedConfig, err := configuration.ReadAuthConfig()
@@ -57,17 +73,22 @@ func TestDo_ReauthenticatesSessionOnUnauthorized(t *testing.T) {
 		t.Fatalf("read stored config: %v", err)
 	}
 
-	if storedConfig.CSRFToken != freshCSRFToken {
-		t.Fatalf("unexpected csrf token: %s", storedConfig.CSRFToken)
+	if storedConfig.CSRFToken != "" {
+		t.Fatalf("expected csrf token to stay out of persisted config, got %s", storedConfig.CSRFToken)
 	}
 
-	if len(storedConfig.Cookies) == 0 || storedConfig.Cookies[0].Value != freshSessionValue {
+	if cookieValue(storedConfig.Cookies, sessionCookieName) != freshSessionValue {
 		t.Fatalf("unexpected stored cookies: %#v", storedConfig.Cookies)
+	}
+
+	if cookieValue(storedConfig.Cookies, autologinCookieName) != freshAutologinValue {
+		t.Fatalf("unexpected stored autologin cookie: %#v", storedConfig.Cookies)
 	}
 }
 
 func TestDo_RewindsRequestBodyAfterSessionRefresh(t *testing.T) {
 	printer.Init(&printer.TestingPrinter{})
+	keyring.MockInit()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
 	server, state := newSessionTestServer(t)
@@ -80,18 +101,32 @@ func TestDo_RewindsRequestBodyAfterSessionRefresh(t *testing.T) {
 
 	payload := []byte(`{"subject":"Updated via session"}`)
 
-	Init(hostURL, configuration.AuthConfig{
-		Host:      server.URL,
-		AuthType:  configuration.AuthTypeSession,
-		Username:  state.username,
-		Password:  state.password,
-		CSRFToken: "stale-csrf",
+	startingAuth := configuration.AuthConfig{
+		Host:     server.URL,
+		AuthType: configuration.AuthTypeSession,
+		Username: state.username,
 		Cookies: []configuration.Cookie{{
 			Name:  sessionCookieName,
 			Value: "stale-session",
 			Path:  "/",
+		}, {
+			Name:  autologinCookieName,
+			Value: freshAutologinValue,
+			Path:  "/",
 		}},
-	}, false)
+	}
+
+	err = configuration.WriteAuthConfig(startingAuth)
+	if err != nil {
+		t.Fatalf("write stored auth config: %v", err)
+	}
+
+	storedAuth, err := configuration.ReadAuthConfig()
+	if err != nil {
+		t.Fatalf("read stored auth config: %v", err)
+	}
+
+	Init(hostURL, storedAuth, false)
 
 	body, err := Do("PATCH", "/api/v3/work_packages/1", nil, &RequestData{
 		ContentType: "application/json",
@@ -113,16 +148,18 @@ func TestDo_RewindsRequestBodyAfterSessionRefresh(t *testing.T) {
 		t.Fatalf("unexpected csrf header: %s", state.patchCSRFToken)
 	}
 
-	if state.loginCount != 1 {
-		t.Fatalf("expected exactly one re-login, got %d", state.loginCount)
+	if state.loginCount != 0 {
+		t.Fatalf("expected cookie-based refresh without password login, got %d logins", state.loginCount)
 	}
 }
 
 const (
-	sessionCookieName = "session"
-	freshSessionValue = "fresh-session"
-	freshCSRFToken    = "fresh-csrf"
-	loginFormToken    = "login-form-token"
+	sessionCookieName   = "session"
+	autologinCookieName = "autologin"
+	freshSessionValue   = "fresh-session"
+	freshAutologinValue = "fresh-autologin"
+	freshCSRFToken      = "fresh-csrf"
+	loginFormToken      = "login-form-token"
 )
 
 type sessionTestState struct {
@@ -147,6 +184,9 @@ func newSessionTestServer(t *testing.T) (*httptest.Server, *sessionTestState) {
 		case "/login":
 			handleLoginRequest(w, r, state)
 		case "/":
+			if hasFreshAutologin(r) {
+				http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: freshSessionValue, Path: "/"})
+			}
 			fmt.Fprintf(w, `<html><head><meta name="csrf-token" content="%s"></head></html>`, freshCSRFToken)
 		case "/api/v3/users/me":
 			if !hasFreshSession(r) {
@@ -214,6 +254,7 @@ func handleLoginRequest(w http.ResponseWriter, r *http.Request, state *sessionTe
 
 		state.loginCount++
 		http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: freshSessionValue, Path: "/"})
+		http.SetCookie(w, &http.Cookie{Name: autologinCookieName, Value: freshAutologinValue, Path: "/"})
 		http.Redirect(w, r, "/", http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -227,4 +268,23 @@ func hasFreshSession(r *http.Request) bool {
 	}
 
 	return cookie.Value == freshSessionValue
+}
+
+func hasFreshAutologin(r *http.Request) bool {
+	cookie, err := r.Cookie(autologinCookieName)
+	if err != nil {
+		return false
+	}
+
+	return cookie.Value == freshAutologinValue
+}
+
+func cookieValue(cookies []configuration.Cookie, name string) string {
+	for _, cookie := range cookies {
+		if cookie.Name == name {
+			return cookie.Value
+		}
+	}
+
+	return ""
 }
